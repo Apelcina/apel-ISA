@@ -2,7 +2,7 @@
 
 Each phase should be usable/testable before the next one leans on it.
 
-- [ ] **1. ISA spec** — word size, registers, addressing modes, instruction
+- [x] **1. ISA spec** — word size, registers, addressing modes, instruction
       encoding (opcode/funct fields, formats). Written spec + encode/decode
       table, no code yet. See [isa-spec.md](isa-spec.md).
 - [ ] **2. Functional emulator** — fetch-decode-execute loop, flat memory,
@@ -16,6 +16,14 @@ Each phase should be usable/testable before the next one leans on it.
 - [ ] **5. Minimal kernel** — boot sequence, trap/syscall instruction, small
       syscall table (write-char, read-char, exit), maybe a timer interrupt.
       Single address space, no paging/processes yet.
+- [ ] **5b. Stretch: virtual memory** — software-managed TLB (MIPS-style:
+      hardware/emulator holds a small translation cache, traps to kernel on
+      a miss so the kernel walks whatever page table format it wants).
+      Page-table-base register, page-fault trap, kernel-installed mappings.
+      No multi-level tables, no swap-to-disk, no scheduler — just enough to
+      demo two toy programs with overlapping virtual addresses landing on
+      different physical frames. Explore after phase 5 is solid; not
+      committed yet.
 - [ ] **6. Shell** — REPL userland program built on the phase 5 syscalls.
 - [ ] **7. Filesystem** — flat file table over a fake block device, plus
       read/write syscalls.
@@ -30,4 +38,5 @@ Each phase should be usable/testable before the next one leans on it.
 
 ## Status
 
-Project scaffolded 2026-08-06. Next up: Phase 1, ISA spec.
+Project scaffolded 2026-08-06. Phase 1 (ISA spec) closed out 2026-08-06 —
+see [isa-spec.md](isa-spec.md). Next up: Phase 2, functional emulator.
