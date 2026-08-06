@@ -1,0 +1,1 @@
+Phase 5: minimal kernel. Boot sequence, trap/syscall instruction, small syscall table (write-char, read-char, exit), maybe a timer interrupt. Single address space, no paging/processes yet. Not started.
