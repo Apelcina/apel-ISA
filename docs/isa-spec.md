@@ -148,10 +148,18 @@ Opcodes `0x01`, `0x0B`, `0x10`-`0x1F`, `0x22`, `0x26`-`0x27`, `0x2A`,
 | `0x0A` | `SLTU`  | `rd = (rs < rt) ? 1 : 0` (unsigned) |
 | `0x0B` | `JR`    | `PC = rs` |
 | `0x0C` | `JALR`  | `rd = PC+4; PC = rs` |
+| `0x0D` | `HALT`  | stop the fetch-decode-execute loop; `rs`/`rt`/`rd` unused |
 | `0x3E` | `SYSCALL` | trap to kernel (phase 5 — syscall number convention TBD) |
 | `0x3F` | `BREAK`   | trap to debugger (phase 4) |
 
-Funct codes `0x0D`-`0x3D` reserved for future ALU ops / extensions.
+Funct codes `0x0E`-`0x3D` reserved for future ALU ops / extensions.
+
+`HALT` is a phase-2 placeholder, not a kernel mechanism — it exists purely
+so the emulator has a defined way to stop, before phase 5 gives us a real
+`SYSCALL`-based exit. Once the kernel exists, real programs will likely
+exit via syscall instead; `HALT` stays as a bare-metal "stop the machine"
+primitive either way (useful for phase 2 test programs that don't have a
+kernel to trap into).
 
 ## Pseudo-instructions
 
