@@ -11,7 +11,11 @@ Each phase should be usable/testable before the next one leans on it.
       done; memory-mapped console I/O is not started yet.
 - [ ] **3. Assembler** — mnemonics + labels + directives -> machine code,
       built off the same tables as the emulator. Disassembler comes nearly
-      free from the same decode table.
+      free from the same decode table. Mnemonics, labels (two-pass
+      resolution), and file I/O (.asm in, flat binary out) are done and
+      run real programs end to end. Not started: directives (.data/.text/
+      etc.), the disassembler itself, and assembling our pseudo-
+      instructions (MOV/NOT/CLEAR/NOP from isa-spec.md).
 - [ ] **4. Toolchain hardening** — simple object format, linker for
       multi-file programs, symbol tables, minimal debugger (single-step,
       register/memory dump).
@@ -45,6 +49,11 @@ Completed so far:
 - Phase 2 (mostly): machine state, decode, execute for every instruction
   in the opcode table, the fetch-decode-execute loop, and a register/
   memory dump tool (2026-08-07). Still missing: memory-mapped console I/O.
+- Phase 3 (mostly): mnemonic table, single-line and two-pass multi-line
+  assembly with label resolution, and file I/O - a real .asm file now
+  assembles to a flat binary and runs on the emulator end to end
+  (2026-08-07). Still missing: directives, the disassembler, and
+  pseudo-instruction support.
 
-Next up: finish Phase 2's console I/O, or start Phase 3 (assembler)
-against the emulator as-is.
+Next up: pick up a remaining piece of Phase 2 or 3, or move on to
+Phase 4 (toolchain hardening - object format, linker, debugger).
