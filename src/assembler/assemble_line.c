@@ -1,5 +1,6 @@
 #include "assemble_line.h"
 #include "isa.h"
+#include "text_utils.h"
 #include <ctype.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -16,28 +17,6 @@
 #define LINE_BUF_SIZE 256
 #define IMM18_MIN (-131072) /* -(1 << 17) */
 #define IMM18_MAX 131071    /* (1 << 17) - 1 */
-
-static char *trim(char *s) {
-    while (isspace((unsigned char)*s)) {
-        s++;
-    }
-    if (*s == '\0') {
-        return s;
-    }
-    char *end = s + strlen(s) - 1;
-    while (end > s && isspace((unsigned char)*end)) {
-        *end = '\0';
-        end--;
-    }
-    return s;
-}
-
-static void strip_comment(char *line) {
-    char *hash = strchr(line, '#');
-    if (hash) {
-        *hash = '\0';
-    }
-}
 
 static void to_upper_inplace(char *s) {
     for (; *s; s++) {
@@ -114,6 +93,37 @@ static uint32_t pack_j(uint32_t opcode, int32_t address) {
     return (opcode << 26) | ((uint32_t)address & 0x3FFFFFFu);
 }
 
+/* Resolves an operand that's either a raw number or a label name.
+   is_branch selects the formula: branches need a signed word offset
+   from pc+4 (inverting take_branch_if's target = pc+4+(offset<<2), see
+   execute.c); jumps just need the target's word index with no pc
+   involved at all - matches jumps being closer to absolute addressing
+   than relative (see execute_j's pseudo-direct addressing). */
+static bool resolve_branch_or_label(const char *token, uint32_t current_addr,
+                                     const symbol_table_t *symtab,
+                                     bool is_branch, int32_t *out) {
+    if (parse_immediate(token, out)) {
+        return true;
+    }
+    if (!symtab) {
+        return false;
+    }
+    uint32_t target;
+    if (!symbol_table_lookup(symtab, token, &target)) {
+        return false;
+    }
+    if (is_branch) {
+        int64_t diff = (int64_t)target - (int64_t)current_addr - 4;
+        if (diff % 4 != 0) {
+            return false; /* target isn't word-aligned relative to here */
+        }
+        *out = (int32_t)(diff / 4);
+    } else {
+        *out = (int32_t)(target >> 2);
+    }
+    return true;
+}
+
 #define FAIL(...)                                                            \
     do {                                                                     \
         snprintf(error_msg, error_msg_size, __VA_ARGS__);                    \
@@ -138,8 +148,10 @@ static uint32_t pack_j(uint32_t opcode, int32_t address) {
         }                                                                    \
     } while (0)
 
-assemble_line_result_t assemble_line(const char *line, uint32_t *out_word,
-                                      char *error_msg, size_t error_msg_size) {
+assemble_line_result_t assemble_line(const char *line, uint32_t current_addr,
+                                      const symbol_table_t *symtab,
+                                      uint32_t *out_word, char *error_msg,
+                                      size_t error_msg_size) {
     char buf[LINE_BUF_SIZE];
     strncpy(buf, line, sizeof(buf) - 1);
     buf[sizeof(buf) - 1] = '\0';
@@ -269,15 +281,21 @@ assemble_line_result_t assemble_line(const char *line, uint32_t *out_word,
         }
         EXPECT_REG(tokens[0], &rs);
         EXPECT_REG(tokens[1], &rt);
-        /* numeric only for now - label support is step 3 */
-        EXPECT_IMM18(tokens[2], &imm);
+        if (!resolve_branch_or_label(tokens[2], current_addr, symtab, true,
+                                      &imm)) {
+            FAIL("undefined label or invalid immediate '%s'", tokens[2]);
+        }
+        if (imm < IMM18_MIN || imm > IMM18_MAX) {
+            FAIL("branch target '%s' too far (offset %ld out of %d..%d)",
+                 tokens[2], (long)imm, IMM18_MIN, IMM18_MAX);
+        }
         *out_word = pack_i(info->opcode, rs, rt, imm);
         break;
 
     case OPERANDS_LABEL:
-        /* numeric only for now - label support is step 3 */
-        if (!parse_immediate(operand_str, &imm)) {
-            FAIL("invalid address '%s'", operand_str);
+        if (!resolve_branch_or_label(operand_str, current_addr, symtab, false,
+                                      &imm)) {
+            FAIL("undefined label or invalid address '%s'", operand_str);
         }
         if (imm < 0 || imm > 0x3FFFFFF) {
             FAIL("address %ld out of 26-bit range (0..%d)", (long)imm,

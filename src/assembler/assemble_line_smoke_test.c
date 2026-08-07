@@ -1,5 +1,6 @@
 #include "assemble_line.h"
 #include "isa.h"
+#include "symbol_table.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -15,7 +16,8 @@ static void check(const char *label, int ok) {
 static uint32_t expect_ok(const char *line) {
     uint32_t word;
     char err[128];
-    assemble_line_result_t r = assemble_line(line, &word, err, sizeof(err));
+    assemble_line_result_t r =
+        assemble_line(line, 0, NULL, &word, err, sizeof(err));
     if (r != ASSEMBLE_LINE_OK) {
         printf("FAIL: expected '%s' to assemble, got result %d (%s)\n", line,
                r, r == ASSEMBLE_LINE_ERROR ? err : "empty");
@@ -28,7 +30,8 @@ static uint32_t expect_ok(const char *line) {
 static void expect_error(const char *line) {
     uint32_t word;
     char err[128];
-    assemble_line_result_t r = assemble_line(line, &word, err, sizeof(err));
+    assemble_line_result_t r =
+        assemble_line(line, 0, NULL, &word, err, sizeof(err));
     if (r != ASSEMBLE_LINE_ERROR) {
         printf("FAIL: expected '%s' to error, got result %d\n", line, r);
         failed = 1;
@@ -99,18 +102,49 @@ static void test_comments_and_blank_lines(void) {
     uint32_t word;
     char err[128];
 
-    check("blank line is EMPTY",
-          assemble_line("", &word, err, sizeof(err)) == ASSEMBLE_LINE_EMPTY);
+    check("blank line is EMPTY", assemble_line("", 0, NULL, &word, err,
+                                                 sizeof(err)) == ASSEMBLE_LINE_EMPTY);
     check("whitespace-only line is EMPTY",
-          assemble_line("   \t  ", &word, err, sizeof(err)) ==
+          assemble_line("   \t  ", 0, NULL, &word, err, sizeof(err)) ==
               ASSEMBLE_LINE_EMPTY);
     check("comment-only line is EMPTY",
-          assemble_line("# just a comment", &word, err, sizeof(err)) ==
+          assemble_line("# just a comment", 0, NULL, &word, err, sizeof(err)) ==
               ASSEMBLE_LINE_EMPTY);
 
     decoded_instr_t d = decode(expect_ok("ADD r1, r2, r3 # trailing comment"));
     check("trailing comment stripped correctly",
           d.rd == 1 && d.rs == 2 && d.rt == 3);
+}
+
+static void test_label_resolution_via_symtab(void) {
+    symbol_table_t symtab;
+    symbol_table_init(&symtab);
+    symbol_table_add(&symtab, "loop", 12);
+    symbol_table_add(&symtab, "end", 28);
+
+    uint32_t word;
+    char err[128];
+
+    /* BEQ at address 24, targeting "loop" at address 12: same math as
+       the hand-computed -4 we used before labels existed. */
+    assemble_line_result_t r =
+        assemble_line("BEQ r0, r0, loop", 24, &symtab, &word, err, sizeof(err));
+    check("BEQ with label assembles", r == ASSEMBLE_LINE_OK);
+    decoded_instr_t d = decode(word);
+    check("BEQ label resolves to the same offset we used to hand-compute",
+          d.imm == (uint32_t)(-4 & 0x3FFFF));
+
+    /* J at address 4, targeting "end" at address 28: word index 28/4=7 */
+    r = assemble_line("J end", 4, &symtab, &word, err, sizeof(err));
+    check("J with label assembles", r == ASSEMBLE_LINE_OK);
+    d = decode(word);
+    check("J label resolves to target's word index", d.address == 7);
+
+    /* an undefined label should error, not silently produce garbage */
+    r = assemble_line("J nowhere", 0, &symtab, &word, err, sizeof(err));
+    check("undefined label errors", r == ASSEMBLE_LINE_ERROR);
+
+    symbol_table_free(&symtab);
 }
 
 static void test_error_cases(void) {
@@ -128,6 +162,7 @@ int main(void) {
     test_round_trips_every_operand_shape();
     test_hex_and_case_insensitive_mnemonic();
     test_comments_and_blank_lines();
+    test_label_resolution_via_symtab();
     test_error_cases();
 
     if (!failed) {
