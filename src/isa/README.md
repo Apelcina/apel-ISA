@@ -1,1 +1,1 @@
-Shared encode/decode tables derived from [docs/isa-spec.md](../../docs/isa-spec.md). Used by the emulator, assembler, and disassembler so they never disagree. Not started — depends on phase 1.
+Shared encode/decode tables derived from [docs/isa-spec.md](../../docs/isa-spec.md). Used by the emulator, assembler, and disassembler so they never disagree. decode() (isa.h/decode.c) is done - a pure function, raw word in, decoded fields out. The encode direction (for the assembler) isn't started yet.

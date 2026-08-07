@@ -7,6 +7,8 @@ Each phase should be usable/testable before the next one leans on it.
       table, no code yet. See [isa-spec.md](isa-spec.md).
 - [ ] **2. Functional emulator** — fetch-decode-execute loop, flat memory,
       register file, minimal memory-mapped console I/O. No caches/pipeline.
+      Fetch-decode-execute/registers/memory/all instructions/dump tool are
+      done; memory-mapped console I/O is not started yet.
 - [ ] **3. Assembler** — mnemonics + labels + directives -> machine code,
       built off the same tables as the emulator. Disassembler comes nearly
       free from the same decode table.
@@ -39,4 +41,10 @@ Each phase should be usable/testable before the next one leans on it.
 ## Status
 
 Project scaffolded 2026-08-06. Phase 1 (ISA spec) closed out 2026-08-06 —
-see [isa-spec.md](isa-spec.md). Next up: Phase 2, functional emulator.
+see [isa-spec.md](isa-spec.md). Phase 2 emulator core done 2026-08-07:
+machine state (src/emulator/cpu.*), decode (src/isa/decode.c), execute for
+every instruction in the opcode table (src/emulator/execute.c), the
+fetch-decode-execute loop (src/emulator/loop.*), and a register/memory
+dump tool (src/debugger/dump.*). Remaining before Phase 2 is fully closed:
+memory-mapped console I/O. Next up: either that, or starting Phase 3
+(assembler) against the emulator as-is.
