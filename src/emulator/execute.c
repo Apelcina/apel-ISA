@@ -70,6 +70,48 @@ static bool execute_i(cpu_t *cpu, decoded_instr_t d) {
     case 0x08: /* ADDI */
         cpu_reg_write(cpu, d.rt, rs + (uint32_t)sign_extend18(d.imm));
         return false;
+    case 0x20: { /* LB - sign-extend the loaded byte */
+        uint32_t addr = rs + (uint32_t)sign_extend18(d.imm);
+        int8_t byte = (int8_t)cpu_mem_read8(cpu, addr);
+        cpu_reg_write(cpu, d.rt, (uint32_t)(int32_t)byte);
+        return false;
+    }
+    case 0x21: { /* LH - sign-extend the loaded halfword */
+        uint32_t addr = rs + (uint32_t)sign_extend18(d.imm);
+        int16_t half = (int16_t)cpu_mem_read16(cpu, addr);
+        cpu_reg_write(cpu, d.rt, (uint32_t)(int32_t)half);
+        return false;
+    }
+    case 0x23: { /* LW */
+        uint32_t addr = rs + (uint32_t)sign_extend18(d.imm);
+        cpu_reg_write(cpu, d.rt, cpu_mem_read32(cpu, addr));
+        return false;
+    }
+    case 0x24: { /* LBU - already zero-extended by cpu_mem_read8 */
+        uint32_t addr = rs + (uint32_t)sign_extend18(d.imm);
+        cpu_reg_write(cpu, d.rt, cpu_mem_read8(cpu, addr));
+        return false;
+    }
+    case 0x25: { /* LHU - already zero-extended by cpu_mem_read16 */
+        uint32_t addr = rs + (uint32_t)sign_extend18(d.imm);
+        cpu_reg_write(cpu, d.rt, cpu_mem_read16(cpu, addr));
+        return false;
+    }
+    case 0x28: { /* SB */
+        uint32_t addr = rs + (uint32_t)sign_extend18(d.imm);
+        cpu_mem_write8(cpu, addr, cpu_reg_read(cpu, d.rt));
+        return false;
+    }
+    case 0x29: { /* SH */
+        uint32_t addr = rs + (uint32_t)sign_extend18(d.imm);
+        cpu_mem_write16(cpu, addr, cpu_reg_read(cpu, d.rt));
+        return false;
+    }
+    case 0x2B: { /* SW */
+        uint32_t addr = rs + (uint32_t)sign_extend18(d.imm);
+        cpu_mem_write32(cpu, addr, cpu_reg_read(cpu, d.rt));
+        return false;
+    }
     default:
         cpu->halted = true;
         return false;

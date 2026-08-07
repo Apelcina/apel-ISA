@@ -27,4 +27,16 @@ void cpu_reset(cpu_t *cpu);
 uint32_t cpu_reg_read(const cpu_t *cpu, unsigned index);
 void cpu_reg_write(cpu_t *cpu, unsigned index, uint32_t value);
 
+/* Bounds-checked memory access, little-endian. On out-of-bounds access,
+   sets cpu->halted and (for reads) returns 0 - same placeholder
+   convention as illegal instructions, pending real trap handling. Reads
+   are zero-extended into the return value; sign extension, if wanted,
+   is the caller's job. Writes truncate to the access width. */
+uint32_t cpu_mem_read8(cpu_t *cpu, uint32_t addr);
+uint32_t cpu_mem_read16(cpu_t *cpu, uint32_t addr);
+uint32_t cpu_mem_read32(cpu_t *cpu, uint32_t addr);
+void cpu_mem_write8(cpu_t *cpu, uint32_t addr, uint32_t value);
+void cpu_mem_write16(cpu_t *cpu, uint32_t addr, uint32_t value);
+void cpu_mem_write32(cpu_t *cpu, uint32_t addr, uint32_t value);
+
 #endif
