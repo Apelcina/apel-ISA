@@ -21,26 +21,35 @@ static bool take_branch_if(cpu_t *cpu, decoded_instr_t d, bool condition) {
     return true;
 }
 
-static void execute_r(cpu_t *cpu, decoded_instr_t d) {
+/* Returns true if it set pc itself (jump/branch/JR/JALR) - caller must
+   then skip the default +4. */
+static bool execute_r(cpu_t *cpu, decoded_instr_t d) {
     uint32_t rs = cpu_reg_read(cpu, d.rs);
     uint32_t rt = cpu_reg_read(cpu, d.rt);
 
     switch (d.funct) {
     case 0x00: /* ADD */
         cpu_reg_write(cpu, d.rd, rs + rt);
-        break;
+        return false;
     case 0x01: /* SUB */
         cpu_reg_write(cpu, d.rd, rs - rt);
-        break;
+        return false;
+    case 0x0B: /* JR */
+        cpu->pc = rs;
+        return true;
+    case 0x0C: /* JALR */
+        cpu_reg_write(cpu, d.rd, cpu->pc + 4);
+        cpu->pc = rs;
+        return true;
     case 0x0D: /* HALT */
         cpu->halted = true;
-        break;
+        return false;
     default:
         /* Not implemented yet (or genuinely reserved) - real illegal-
            instruction handling is a later design decision. Stop rather
            than silently doing nothing. */
         cpu->halted = true;
-        break;
+        return false;
     }
 }
 
@@ -67,17 +76,40 @@ static bool execute_i(cpu_t *cpu, decoded_instr_t d) {
     }
 }
 
+/* J/JAL target: borrows its top 4 bits from pc+4 (the address *after*
+   the jump), not from the jump instruction's own pc - matches the
+   pseudo-direct addressing scheme in docs/isa-spec.md. */
+static bool execute_j(cpu_t *cpu, decoded_instr_t d) {
+    uint32_t next_pc = cpu->pc + 4;
+    uint32_t target = (next_pc & 0xF0000000u) | (d.address << 2);
+
+    switch (d.opcode) {
+    case 0x02: /* J */
+        cpu->pc = target;
+        return true;
+    case 0x03: /* JAL */
+        cpu_reg_write(cpu, 1, next_pc); /* r1 = link register (placeholder, see spec) */
+        cpu->pc = target;
+        return true;
+    default:
+        cpu->halted = true;
+        return false;
+    }
+}
+
 void execute(cpu_t *cpu, decoded_instr_t d) {
     bool pc_overridden = false;
 
     switch (d.format) {
     case FMT_R:
-        execute_r(cpu, d);
+        pc_overridden = execute_r(cpu, d);
         break;
     case FMT_I:
         pc_overridden = execute_i(cpu, d);
         break;
     case FMT_J:
+        pc_overridden = execute_j(cpu, d);
+        break;
     case FMT_INVALID:
         cpu->halted = true;
         break;
