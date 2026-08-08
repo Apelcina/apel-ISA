@@ -26,6 +26,12 @@ typedef struct {
 
 decoded_instr_t decode(uint32_t word);
 
+/* Sign-extend an 18-bit field (our I-type immediate width) to a full
+   32-bit signed value. Shared by execute() (interpreting an operand)
+   and the disassembler (printing one) - moved here once a second real
+   consumer needed it, not before. */
+int32_t sign_extend18(uint32_t imm);
+
 /* Operand shapes, one per distinct assembly-text layout a mnemonic can
    have - not the same granularity as `format`. Several mnemonics share
    a format but need different operand parsing (e.g. ADD rd,rs,rt vs.
@@ -58,5 +64,12 @@ typedef struct {
 /* Exact-match lookup (case-sensitive for now). Returns NULL if `name`
    isn't a recognized mnemonic. */
 const instr_info_t *lookup_mnemonic(const char *name);
+
+/* Reverse lookup for the disassembler: given a decoded encoding, find
+   the matching table entry. funct is ignored unless format == FMT_R.
+   Returns NULL for a genuinely unrecognized encoding (same cases
+   decode()/execute() treat as invalid). */
+const instr_info_t *lookup_by_encoding(format_t format, uint32_t opcode,
+                                        uint32_t funct);
 
 #endif

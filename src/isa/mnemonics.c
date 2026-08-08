@@ -60,3 +60,18 @@ const instr_info_t *lookup_mnemonic(const char *name) {
     }
     return NULL;
 }
+
+const instr_info_t *lookup_by_encoding(format_t format, uint32_t opcode,
+                                        uint32_t funct) {
+    size_t i;
+    for (i = 0; i < INSTRUCTION_COUNT; i++) {
+        if (instructions[i].format != format || instructions[i].opcode != opcode) {
+            continue;
+        }
+        if (format == FMT_R && instructions[i].funct != funct) {
+            continue;
+        }
+        return &instructions[i];
+    }
+    return NULL;
+}

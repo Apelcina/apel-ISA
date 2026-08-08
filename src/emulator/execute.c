@@ -1,11 +1,5 @@
 #include "execute.h"
 
-/* Sign-extend an 18-bit field (our I-type immediate width) to a full
-   32-bit signed value. */
-static int32_t sign_extend18(uint32_t imm) {
-    return ((int32_t)(imm << 14)) >> 14;
-}
-
 /* If condition is true, sets cpu->pc to the branch target and returns
    true (caller must skip the default +4). Otherwise leaves pc alone and
    returns false. Shifting happens in unsigned space on purpose - left-

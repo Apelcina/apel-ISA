@@ -58,3 +58,7 @@ decoded_instr_t decode(uint32_t word) {
 
     return d;
 }
+
+int32_t sign_extend18(uint32_t imm) {
+    return ((int32_t)(imm << 14)) >> 14;
+}

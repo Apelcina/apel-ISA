@@ -2,7 +2,11 @@
 #include <ctype.h>
 
 void dump_registers(const cpu_t *cpu, FILE *out) {
-    fprintf(out, "pc = 0x%08X  %s\n", cpu->pc, cpu->halted ? "HALTED" : "running");
+    /* "READY" rather than "running" - dump_registers gets called from a
+       paused interactive debugger just as often as from something
+       actually mid-execution, and !halted only ever means "hasn't
+       stopped," never "is actively executing right now." */
+    fprintf(out, "pc = 0x%08X  %s\n", cpu->pc, cpu->halted ? "HALTED" : "READY");
 
     for (unsigned i = 0; i < APEL_NUM_REGS; i++) {
         fprintf(out, "r%-2u=0x%08X%s", i, cpu_reg_read(cpu, i),
